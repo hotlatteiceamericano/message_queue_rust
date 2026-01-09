@@ -7,6 +7,7 @@ Message queue常會需要支援極大量的讀寫需求，partition是支持大�
 
 ## Segment
 Segment負責把message以二進位的形式寫入在local file system，以及將message從二進位的形式讀取、並以message物件的方式回傳。
+Segment需要記錄`base_offset: u64`, `write_position: u64`和`file` fields。base_offset用來記錄這個segment在一個topic下可能是第幾個segment，write_position用來記錄這個segment本身的offset是多少。
 
 ### Segment::write(message: Message) -> Result<u64>
 write method接受Message參數，使用serde library將message的content轉化成二進制的方式並儲存到該segment對應的實體檔案。

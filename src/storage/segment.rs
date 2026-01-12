@@ -69,15 +69,23 @@ impl Segment {
 #[cfg(test)]
 mod test {
 
+    use std::path::PathBuf;
+
+    use rstest::fixture;
+    use rstest::rstest;
     use tempfile::NamedTempFile;
 
     use crate::storage::segment::Message;
     use crate::storage::segment::Segment;
 
-    #[test]
-    fn test_write() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let mut segment = Segment::new(0, temp_file.path().to_path_buf()).unwrap();
+    #[fixture]
+    fn temp_file_path_buf() -> PathBuf {
+        NamedTempFile::new().unwrap().path().to_path_buf()
+    }
+
+    #[rstest]
+    fn test_write(temp_file_path_buf: PathBuf) {
+        let mut segment = Segment::new(0, temp_file_path_buf).unwrap();
         let message = &Message::new(String::from("hello world!"));
 
         let latest_offset = segment.write(&message).unwrap();
@@ -86,10 +94,9 @@ mod test {
         assert_eq!(latest_offset, 4 + serialized_msg.unwrap().len() as u64);
     }
 
-    #[test]
-    pub fn test_read() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let mut segment = Segment::new(0, temp_file.path().to_path_buf()).unwrap();
+    #[rstest]
+    pub fn test_read(temp_file_path_buf: PathBuf) {
+        let mut segment = Segment::new(0, temp_file_path_buf).unwrap();
 
         let message = Message::new(String::from("hello world!"));
         segment.write(&message).unwrap();

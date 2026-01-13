@@ -18,16 +18,27 @@ impl Topic {
     }
 
     /// It fids the latest segment, and call its write method
-    /// then update topic's global offset, and rotate the segment when necessary
+    /// then update topic's global offset
+    /// finally, rotate the segment when necessary
     /// # Arguments
     /// * message - the message being written to the  topic
     /// # Returns
     /// Result indicates the write is successful or not
     pub fn write(&mut self, message: &Message) -> io::Result<()> {
-        if let Some(mut last_segment) = self.segments.last_entry() {
-            last_segment.get_mut().write(message)?;
-            self.write_offset =
-                last_segment.get().base_offset() + last_segment.get().write_position();
+        if let Some(mut last_entry) = self.segments.last_entry() {
+            let last_segment = last_entry.get_mut();
+
+            last_segment.write(message)?;
+
+            self.write_offset = last_segment.base_offset() + last_segment.write_position();
+
+            if last_segment.write_position() >= Segment::SEGMENT_SIZE {
+                self.segments.insert(
+                    self.write_offset,
+                    Segment::new(self.name.clone(), self.write_offset)?,
+                );
+            }
+
             Ok(())
         } else {
             panic!("Not able to find last segment from topic: {}.", self.name);
@@ -39,7 +50,6 @@ impl Topic {
 mod test {
     use rstest::fixture;
     use rstest::rstest;
-    use tempfile::NamedTempFile;
 
     use crate::message::Message;
     use crate::storage::segment::Segment;
@@ -47,11 +57,11 @@ mod test {
 
     #[fixture]
     fn test_topic() -> Topic {
-        let temp_file = NamedTempFile::new().unwrap();
         let mut topic = Topic::new(String::from("test topic"));
-        topic
-            .segments
-            .insert(0, Segment::new(0, temp_file.path().to_path_buf()).unwrap());
+        topic.segments.insert(
+            0,
+            Segment::new(String::from("the_segment_to_test_topic"), 0).unwrap(),
+        );
         topic
     }
 

@@ -6,8 +6,6 @@ pub struct Message {
 }
 
 impl Message {
-    const MESSAGE_SIZE: u64 = 128;
-
     pub fn new(content: String) -> Self {
         Self { content }
     }

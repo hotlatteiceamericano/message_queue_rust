@@ -12,10 +12,10 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn new(base_offset: u64, path: PathBuf) -> io::Result<Self> {
-        if let Some(parent) = path.parent() {
-            create_dir_all(parent)?;
-        }
+    pub const SEGMENT_SIZE: u64 = 128;
+
+    pub fn new(topic_name: String, base_offset: u64) -> io::Result<Self> {
+        let path = Self::create_path(topic_name, base_offset)?;
 
         let file = OpenOptions::new()
             .create(true)
@@ -76,6 +76,24 @@ impl Segment {
         bincode::deserialize::<Message>(&msg_bytes)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
+
+    pub fn is_full(&self) -> bool {
+        self.write_position() >= Segment::SEGMENT_SIZE
+    }
+
+    fn create_path(topic_name: String, base_offset: u64) -> io::Result<PathBuf> {
+        let project_root = std::env::current_dir()?;
+        let path = project_root
+            .join("data")
+            .join(topic_name)
+            .join(format!("{:08}", base_offset))
+            .with_extension("queue");
+        eprintln!("created path name: {}", path.to_str().unwrap());
+        if let Some(parent) = path.parent() {
+            create_dir_all(parent)?;
+        }
+        Ok(path)
+    }
 }
 
 #[cfg(test)]
@@ -96,8 +114,8 @@ mod test {
     }
 
     #[rstest]
-    fn test_write(temp_file_path_buf: PathBuf) {
-        let mut segment = Segment::new(0, temp_file_path_buf).unwrap();
+    fn test_write() {
+        let mut segment = Segment::new(String::from("test_topic"), 0).unwrap();
         let message = &Message::new(String::from("hello world!"));
 
         let latest_offset = segment.write(&message).unwrap();
@@ -107,8 +125,8 @@ mod test {
     }
 
     #[rstest]
-    pub fn test_read(temp_file_path_buf: PathBuf) {
-        let mut segment = Segment::new(0, temp_file_path_buf).unwrap();
+    pub fn test_read() {
+        let mut segment = Segment::new(String::from("test_topic_2"), 0).unwrap();
 
         let message = Message::new(String::from("hello world!"));
         segment.write(&message).unwrap();

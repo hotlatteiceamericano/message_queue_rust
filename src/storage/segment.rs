@@ -30,6 +30,18 @@ impl Segment {
         })
     }
 
+    pub fn base_offset(&self) -> u64 {
+        self.base_offset
+    }
+
+    pub fn write_position(&self) -> u64 {
+        self.write_position
+    }
+
+    /// # Arguments
+    /// * `message` - the message being written to the segment
+    /// # Returns
+    /// new local write offset after written the given message
     pub fn write(&mut self, message: &Message) -> io::Result<u64> {
         let serialized_msg = bincode::serialize(message)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
@@ -41,7 +53,7 @@ impl Segment {
 
         self.write_position += 4 + msg_len as u64;
 
-        Ok(self.base_offset + self.write_position)
+        Ok(self.write_position)
     }
 
     /// #Arguments

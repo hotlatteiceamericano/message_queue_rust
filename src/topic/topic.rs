@@ -17,9 +17,11 @@ impl Topic {
         }
     }
 
-    pub fn write(&mut self, message: Message) -> io::Result<()> {
+    pub fn write(&mut self, message: &Message) -> io::Result<()> {
         if let Some(mut last_segment) = self.segments.last_entry() {
-            last_segment.get_mut().write(&message)?;
+            last_segment.get_mut().write(message)?;
+            self.write_offset =
+                last_segment.get().base_offset() + last_segment.get().write_position();
             Ok(())
         } else {
             panic!("Not able to find last segment from topic: {}.", self.name);
@@ -49,12 +51,19 @@ mod test {
 
     #[rstest]
     fn test_write(mut test_topic: Topic) {
-        test_topic
-            .write(Message::new(String::from("hello world!")))
-            .unwrap();
+        let first_msg = Message::new(String::from("hello world!"));
+        test_topic.write(&first_msg).unwrap();
         let mut last_entry = test_topic.segments.last_entry().unwrap();
         let segment = last_entry.get_mut();
         let message = segment.read(0).unwrap();
-        assert_eq!(message.content, "hello world!");
+        assert_eq!(&message.content, &first_msg.content);
+        assert_eq!(test_topic.write_offset, 24);
+
+        let second_msg = Message::new(String::from("hello world again!"));
+        test_topic.write(&second_msg).unwrap();
+        let mut last_entry = test_topic.segments.last_entry().unwrap();
+        let segment = last_entry.get_mut();
+        let message = segment.read(24).unwrap();
+        assert_eq!(&message.content, &second_msg.content);
     }
 }

@@ -62,8 +62,6 @@ impl Segment {
     /// # Returns
     /// message at the give offset
     pub fn read(&mut self, offset: u64) -> io::Result<Message> {
-        // move the file cursor to the given offset
-        // return the message
         self.file.seek(io::SeekFrom::Start(offset))?;
 
         let mut len_bytes = [0u8; 4];

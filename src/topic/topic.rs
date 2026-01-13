@@ -52,38 +52,60 @@ impl Topic {
 
 #[cfg(test)]
 mod test {
+    use std::fs;
+
     use rstest::fixture;
     use rstest::rstest;
 
     use crate::message::Message;
-    use crate::storage::segment::Segment;
     use crate::topic::topic::Topic;
 
+    struct TestTopic {
+        topic: Topic,
+    }
+
+    impl TestTopic {
+        fn new() -> Self {
+            let topic = Topic::new(String::from("test_topic"));
+            Self { topic }
+        }
+    }
+
+    impl Drop for TestTopic {
+        fn drop(&mut self) {
+            let topic_path_buf = std::env::current_dir()
+                .unwrap()
+                .join("data")
+                .join(&self.topic.name);
+            fs::remove_dir_all(topic_path_buf).unwrap();
+        }
+    }
+
     #[fixture]
-    fn test_topic() -> Topic {
-        Topic::new(String::from("test_topic"))
+    fn test_topic() -> TestTopic {
+        TestTopic::new()
     }
 
     #[rstest]
-    fn test_write(mut test_topic: Topic) {
+    fn test_write(mut test_topic: TestTopic) {
         let first_msg = Message::new(String::from("hello world!"));
-        test_topic.write(&first_msg).unwrap();
-        let mut last_entry = test_topic.segments.last_entry().unwrap();
+        test_topic.topic.write(&first_msg).unwrap();
+        let mut last_entry = test_topic.topic.segments.last_entry().unwrap();
         let segment = last_entry.get_mut();
         let message = segment.read(0).unwrap();
         assert_eq!(&message.content, &first_msg.content);
-        assert_eq!(test_topic.write_offset, 24);
+        assert_eq!(test_topic.topic.write_offset, 24);
 
         let second_msg = Message::new(String::from("hello world again!"));
-        test_topic.write(&second_msg).unwrap();
-        let mut last_entry = test_topic.segments.last_entry().unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        let mut last_entry = test_topic.topic.segments.last_entry().unwrap();
         let segment = last_entry.get_mut();
         let message = segment.read(24).unwrap();
         assert_eq!(&message.content, &second_msg.content);
 
-        test_topic.write(&second_msg).unwrap();
-        test_topic.write(&second_msg).unwrap();
-        test_topic.write(&second_msg).unwrap();
-        assert_eq!(test_topic.segments.len(), 2);
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        assert_eq!(test_topic.topic.segments.len(), 2);
     }
 }

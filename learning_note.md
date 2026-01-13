@@ -1,3 +1,5 @@
 1. 要寫入message的長度時，也要用二進位的形式寫入。選用big endian的原因是符合人看的方式，最大的位元擺在前面。
 2. 因為一個topic下面可能有很多segment，透過紀錄base_offset來知道一個global offset會落在哪一個segment
 3. 使用rstest的fixture在統一的地方宣稱test dependency objects
+4. topic用segment的base offset來找下一個write，和哪裡read messages
+5. topic需要管理global write offset；consumer group管理global read offset per consumer group

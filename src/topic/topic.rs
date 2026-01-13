@@ -17,6 +17,12 @@ impl Topic {
         }
     }
 
+    /// It fids the latest segment, and call its write method
+    /// then update topic's global offset, and rotate the segment when necessary
+    /// # Arguments
+    /// * message - the message being written to the  topic
+    /// # Returns
+    /// Result indicates the write is successful or not
     pub fn write(&mut self, message: &Message) -> io::Result<()> {
         if let Some(mut last_segment) = self.segments.last_entry() {
             last_segment.get_mut().write(message)?;

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, io};
+use std::{collections::BTreeMap, io, path::PathBuf};
 
 use crate::{message::Message, storage::segment::Segment};
 
@@ -10,9 +10,13 @@ pub struct Topic {
 
 impl Topic {
     pub fn new(name: String) -> Self {
+        if PathBuf::from(std::env::current_dir().unwrap().join(&name)).exists() {
+            panic!("topic with name: {} already exist!", &name);
+        }
+
         Self {
-            name,
-            segments: BTreeMap::new(),
+            name: name.clone(),
+            segments: BTreeMap::from([(0, Segment::new(name.clone(), 0).unwrap())]),
             write_offset: 0,
         }
     }
@@ -57,12 +61,7 @@ mod test {
 
     #[fixture]
     fn test_topic() -> Topic {
-        let mut topic = Topic::new(String::from("test topic"));
-        topic.segments.insert(
-            0,
-            Segment::new(String::from("the_segment_to_test_topic"), 0).unwrap(),
-        );
-        topic
+        Topic::new(String::from("test_topic"))
     }
 
     #[rstest]
@@ -81,5 +80,10 @@ mod test {
         let segment = last_entry.get_mut();
         let message = segment.read(24).unwrap();
         assert_eq!(&message.content, &second_msg.content);
+
+        test_topic.write(&second_msg).unwrap();
+        test_topic.write(&second_msg).unwrap();
+        test_topic.write(&second_msg).unwrap();
+        assert_eq!(test_topic.segments.len(), 2);
     }
 }

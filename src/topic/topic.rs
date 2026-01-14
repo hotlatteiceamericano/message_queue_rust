@@ -1,6 +1,9 @@
 use std::{collections::BTreeMap, io, path::PathBuf};
 
-use crate::{message::Message, storage::segment::Segment};
+use crate::{
+    message::Message,
+    storage::segment::{self, Segment},
+};
 
 pub struct Topic {
     segments: BTreeMap<u64, Segment>,
@@ -21,7 +24,7 @@ impl Topic {
         }
     }
 
-    /// It fids the latest segment, and call its write method
+    /// It finds the latest segment, and call its write method
     /// then update topic's global offset
     /// finally, rotate the segment when necessary
     /// # Arguments
@@ -47,6 +50,25 @@ impl Topic {
         } else {
             panic!("Not able to find last segment from topic: {}.", self.name);
         }
+    }
+
+    /// It reads and returns the message with given offset
+    /// # Arguments
+    /// * offset - self explanatory
+    /// # Returns the message
+    pub fn read(&mut self, offset: u64) -> io::Result<Message> {
+        let target_segment = match self.segments.range_mut(..=offset).next_back() {
+            Some((_, segment)) => segment,
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("cannot find corresponding segment per offset: {}", offset),
+                ));
+            }
+        };
+
+        let local_position = offset - target_segment.base_offset();
+        target_segment.read(local_position)
     }
 }
 
@@ -107,6 +129,21 @@ mod test {
         test_topic.topic.write(&second_msg).unwrap();
         test_topic.topic.write(&second_msg).unwrap();
         test_topic.topic.write(&second_msg).unwrap();
-        assert_eq!(test_topic.topic.segments.len(), 2);
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        test_topic.topic.write(&second_msg).unwrap();
+        assert_eq!(test_topic.topic.segments.len(), 3);
+    }
+
+    #[rstest]
+    fn test_read(mut test_topic: TestTopic) {
+        assert_eq!(test_topic.topic.segments.len(), 1);
+
+        let message = Message::new(String::from("testing_read"));
+        test_topic.topic.write(&message).unwrap();
+
+        assert_eq!(test_topic.topic.read(0).unwrap().content, message.content);
     }
 }

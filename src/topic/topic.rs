@@ -81,6 +81,7 @@ mod test {
         }
     }
 
+    // todo: use Deref to automatically ref to the inner topic
     #[fixture]
     fn test_topic() -> TestTopic {
         TestTopic::new()

@@ -69,6 +69,12 @@ impl Topic {
     }
 }
 
+impl PartialEq for Topic {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::fs;

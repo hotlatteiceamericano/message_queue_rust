@@ -1,9 +1,6 @@
 use std::{collections::BTreeMap, io, path::PathBuf};
 
-use crate::{
-    message::Message,
-    storage::segment::{self, Segment},
-};
+use crate::{message::Message, storage::segment::Segment};
 
 pub struct Topic {
     segments: BTreeMap<u64, Segment>,
@@ -76,6 +73,7 @@ impl Topic {
 mod test {
     use std::fs;
 
+    use rand::Rng;
     use rstest::fixture;
     use rstest::rstest;
 
@@ -86,9 +84,12 @@ mod test {
         topic: Topic,
     }
 
+    /// Needs to use random charaters as test topic names
+    /// to prevent concurrent issue that different test cases
+    /// interacting with the same topic and the same segment file
     impl TestTopic {
         fn new() -> Self {
-            let topic = Topic::new(String::from("test_topic"));
+            let topic = Topic::new(String::from(generate_random_chars()));
             Self { topic }
         }
     }
@@ -145,5 +146,15 @@ mod test {
         test_topic.topic.write(&message).unwrap();
 
         assert_eq!(test_topic.topic.read(0).unwrap().content, message.content);
+    }
+
+    pub fn generate_random_chars() -> String {
+        let mut rng = rand::thread_rng();
+        (0..8)
+            .map(|_| {
+                let idx = rng.gen_range(0..26);
+                (b'a' + idx) as char
+            })
+            .collect()
     }
 }

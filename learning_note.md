@@ -7,3 +7,7 @@
     - 我覺得一個比較關鍵的原因是因為Entry是owned value，如果因為我的遍歷而擁有了這個BTreeMap裡面的所有值感覺也不合理
 7. 因為回傳的是tuple的關係，接續用map做處理時也記得互動的是tuple type
 8. topic找target_segment那邊學到善用match來簡化程式碼
+
+
+### Test related
+1. 不同的test cases是在不同的執行緒裡執行，所以即便不同的rstest之間會drop test topic，仍然有可能會造成concurrency issue

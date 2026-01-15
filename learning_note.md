@@ -7,6 +7,10 @@
     - 我覺得一個比較關鍵的原因是因為Entry是owned value，如果因為我的遍歷而擁有了這個BTreeMap裡面的所有值感覺也不合理
 7. 因為回傳的是tuple的關係，接續用map做處理時也記得互動的是tuple type
 8. topic找target_segment那邊學到善用match來簡化程式碼
+9. 很多時候derive一個trait會要求這個struct下面的fields struct也要derive 相同的trait，例如Debug, Serialize, etc...
+10. Option.and_then()可以用來對option做chaining process
+11. 跟上次一樣，寫segment/topic的load和save又費了我好大的力氣：
+  - 
 
 
 ### Test related

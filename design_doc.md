@@ -30,8 +30,10 @@ Topic管理不同類型的訊息。Topic需要追蹤該topic下面有幾個segme
 需要注記這裡記錄的offset是「read offset」，不同的Topic所記錄的offset是「write offset」。
 consumer group同樣需要提供write和read methods。
 
-### ConsumerGroup::write(topic: Topic, message: Message) -> Result<_>
-接受Topic和Message當做參數，首先先檢查該Topic是否存在，接著呼叫Topic::write將message寫入到最新的write offset。最後回傳Result<_>來表達寫入的成功與否。
+### ConsumerGroup::write(topic_name: String, message: Message) -> Result<_>
+接受topic name和Message當做參數，首先透過Topic::from檢查該Topic是否存在，因此，會需要一個topic.save()來儲存既有的topic。topic會自身的field以json的格式儲存在每個topic的目錄下面，以利Topic::from讀取。
+
+接著呼叫Topic::write將message寫入到最新的write offset。最後回傳Result<_>來表達寫入的成功與否。
 
 ### ConsumerGroup::read(topic: Topic) -> Result<Message>
 接受Topic當作參數，並根據HashMap的read offset來讀取最新的message。會回傳Result<Message>給client。

@@ -1,8 +1,17 @@
-use std::{collections::BTreeMap, io, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs,
+    io::{self},
+    path::PathBuf,
+};
+
+use serde::{Deserialize, Serialize};
 
 use crate::{message::Message, storage::segment::Segment};
 
+#[derive(Serialize, Deserialize)]
 pub struct Topic {
+    #[serde(skip)]
     segments: BTreeMap<u64, Segment>,
     name: String,
     write_offset: u64,
@@ -19,6 +28,40 @@ impl Topic {
             segments: BTreeMap::from([(0, Segment::new(name.clone(), 0).unwrap())]),
             write_offset: 0,
         }
+    }
+
+    /// Loads a topic with given name
+    /// # Arguments
+    /// * topic_name - self explanatory
+    pub fn load(topic_name: String) -> io::Result<Self> {
+        let topic_file_path = std::env::current_dir()?.join("data").join(&topic_name);
+        if topic_file_path.exists() {
+            let segments = Self::load_segments(topic_name)?;
+            let json = fs::read_to_string(topic_file_path.join("index.json"))?;
+            let mut topic = serde_json::from_str::<Topic>(&json)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+            topic.segments = segments;
+
+            Ok(topic)
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("Did not found topic with topic name: {}", &topic_name),
+            ))
+        }
+    }
+
+    /// Saves this instance to a json file
+    /// So that the from function may find the metadata and loads it
+    pub fn save(&self) -> io::Result<()> {
+        let json = serde_json::to_string(&self)?;
+        let path = std::env::current_dir()?
+            .join("data")
+            .join(&self.name)
+            .join("index")
+            .with_extension("json");
+        fs::write(path, json)?;
+        Ok(())
     }
 
     /// It finds the latest segment, and call its write method
@@ -66,6 +109,37 @@ impl Topic {
 
         let local_position = offset - target_segment.base_offset();
         target_segment.read(local_position)
+    }
+
+    fn load_segments(topic_name: String) -> io::Result<BTreeMap<u64, Segment>> {
+        let topic_directory = std::env::current_dir()?.join("data").join(&topic_name);
+        let segment_file_paths = fs::read_dir(topic_directory)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| path.is_file())
+            .filter(|path| {
+                path.extension()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .eq_ignore_ascii_case("queue")
+            })
+            .collect::<Vec<PathBuf>>();
+
+        let mut segments = BTreeMap::new();
+        for segment_file_path in segment_file_paths {
+            let base_offset = segment_file_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .and_then(|s| s.parse::<u64>().ok())
+                .ok_or_else(|| {
+                    io::Error::new(io::ErrorKind::InvalidInput, "Invalid segment filename")
+                })?;
+            let segment = Segment::new(topic_name.clone(), base_offset)?;
+            segments.insert(base_offset, segment);
+        }
+
+        Ok(segments)
     }
 }
 
@@ -133,14 +207,9 @@ mod test {
         let message = segment.read(24).unwrap();
         assert_eq!(&message.content, &second_msg.content);
 
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
-        test_topic.topic.write(&second_msg).unwrap();
+        for _ in 0..8 {
+            test_topic.topic.write(&second_msg).unwrap();
+        }
         assert_eq!(test_topic.topic.segments.len(), 3);
     }
 
@@ -152,6 +221,21 @@ mod test {
         test_topic.topic.write(&message).unwrap();
 
         assert_eq!(test_topic.topic.read(0).unwrap().content, message.content);
+    }
+
+    #[rstest]
+    pub fn test_save_load(mut test_topic: TestTopic) {
+        let message = Message::new(String::from("testing_for_save_and_load"));
+        test_topic.topic.write(&message).unwrap();
+
+        test_topic.topic.save().unwrap();
+
+        let topic_name = test_topic.topic.name.clone();
+        let mut loaded_topic = Topic::load(topic_name).unwrap();
+
+        assert_eq!(loaded_topic.name, test_topic.topic.name);
+        assert_eq!(loaded_topic.segments.len(), 1);
+        assert_eq!(loaded_topic.read(0).unwrap().content, message.content);
     }
 
     pub fn generate_random_chars() -> String {

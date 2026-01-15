@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::message::Message;
 use std::{
     fs::{File, OpenOptions, create_dir_all},

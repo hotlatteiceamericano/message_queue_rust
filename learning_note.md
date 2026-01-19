@@ -12,6 +12,7 @@
 11. 跟上次一樣，寫segment/topic的load和save又費了我好大的力氣：
   - 
 12. HashMap竟然要等到key implement了Hash and Eq trait才能被使用
+13. 即便是application crate也可以有lib，而且似乎把components放在lib裡面，再讓application's main.rs import lib是比較好的整理方法
 
 
 ### Test related

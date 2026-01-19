@@ -26,7 +26,7 @@ impl Topic {
 
         Self {
             name: name.clone(),
-            segments: BTreeMap::from([(0, Segment::new(name.clone(), 0).unwrap())]),
+            segments: BTreeMap::from([(0, Segment::new(name.as_str(), 0).unwrap())]),
             write_offset: 0,
         }
     }
@@ -87,7 +87,7 @@ impl Topic {
             if last_segment.write_position() >= Segment::SEGMENT_SIZE {
                 self.segments.insert(
                     self.write_offset,
-                    Segment::new(self.name.clone(), self.write_offset)?,
+                    Segment::new(self.name.as_str(), self.write_offset)?,
                 );
             }
 
@@ -140,7 +140,7 @@ impl Topic {
                 .ok_or_else(|| {
                     io::Error::new(io::ErrorKind::InvalidInput, "Invalid segment filename")
                 })?;
-            let segment = Segment::new(topic_name.clone(), base_offset)?;
+            let segment = Segment::new(topic_name.as_str(), base_offset)?;
             segments.insert(base_offset, segment);
         }
 

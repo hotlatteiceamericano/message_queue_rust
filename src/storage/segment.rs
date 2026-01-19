@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::message::Message;
 use std::{
     fs::{File, OpenOptions, create_dir_all},
@@ -17,8 +15,8 @@ pub struct Segment {
 impl Segment {
     pub const SEGMENT_SIZE: u64 = 128;
 
-    pub fn new(topic_name: String, base_offset: u64) -> io::Result<Self> {
-        let path = Self::create_path(topic_name, base_offset)?;
+    pub fn new(topic_name: &str, base_offset: u64) -> io::Result<Self> {
+        let path = Self::create_path(topic_name.to_string(), base_offset)?;
 
         let file = OpenOptions::new()
             .create(true)
@@ -100,34 +98,42 @@ impl Segment {
 #[cfg(test)]
 mod test {
 
-    use std::path::PathBuf;
+    use std::fs;
 
+    use rand::Rng;
     use rstest::fixture;
     use rstest::rstest;
-    use tempfile::NamedTempFile;
 
     use crate::storage::segment::Message;
     use crate::storage::segment::Segment;
 
     #[fixture]
-    fn temp_file_path_buf() -> PathBuf {
-        NamedTempFile::new().unwrap().path().to_path_buf()
+    fn random_topic_name() -> String {
+        let mut rng = rand::thread_rng();
+        (0..8)
+            .map(|_| {
+                let idx = rng.gen_range(0..26);
+                (b'a' + idx) as char
+            })
+            .collect()
     }
 
     #[rstest]
-    fn test_write() {
-        let mut segment = Segment::new(String::from("test_topic"), 0).unwrap();
+    fn test_write(random_topic_name: String) {
+        let mut segment = Segment::new(&random_topic_name, 0).unwrap();
         let message = &Message::new(String::from("hello world!"));
 
         let latest_offset = segment.write(&message).unwrap();
 
         let serialized_msg = bincode::serialize(&message.content);
         assert_eq!(latest_offset, 4 + serialized_msg.unwrap().len() as u64);
+
+        remove_path(random_topic_name.as_str());
     }
 
     #[rstest]
-    pub fn test_read() {
-        let mut segment = Segment::new(String::from("test_topic_2"), 0).unwrap();
+    pub fn test_read(random_topic_name: String) {
+        let mut segment = Segment::new(&random_topic_name, 0).unwrap();
 
         let message = Message::new(String::from("hello world!"));
         segment.write(&message).unwrap();
@@ -136,5 +142,15 @@ mod test {
             .read(0)
             .unwrap_or_else(|e| panic!("error when read from the segment: {:#?}", e));
         assert_eq!(message_read.content, "hello world!");
+
+        remove_path(random_topic_name.as_str());
+    }
+
+    fn remove_path(topic_name: &str) {
+        let topic_path_buf = std::env::current_dir()
+            .unwrap()
+            .join("data")
+            .join(topic_name);
+        fs::remove_dir_all(topic_path_buf).unwrap();
     }
 }

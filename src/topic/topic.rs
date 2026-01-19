@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs,
+    hash::Hash,
     io::{self},
     path::PathBuf,
 };
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{message::Message, storage::segment::Segment};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Topic {
     #[serde(skip)]
     segments: BTreeMap<u64, Segment>,
@@ -28,6 +29,10 @@ impl Topic {
             segments: BTreeMap::from([(0, Segment::new(name.clone(), 0).unwrap())]),
             write_offset: 0,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     /// Loads a topic with given name
@@ -146,6 +151,14 @@ impl Topic {
 impl PartialEq for Topic {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
+    }
+}
+
+impl Eq for Topic {}
+
+impl Hash for Topic {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
     }
 }
 

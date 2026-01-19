@@ -7,6 +7,7 @@ use std::{
     path::PathBuf,
 };
 
+#[derive(Debug)]
 pub struct Segment {
     base_offset: u64,
     write_position: u64,

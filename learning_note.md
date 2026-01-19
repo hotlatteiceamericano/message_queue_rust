@@ -11,6 +11,7 @@
 10. Option.and_then()可以用來對option做chaining process
 11. 跟上次一樣，寫segment/topic的load和save又費了我好大的力氣：
   - 
+12. HashMap竟然要等到key implement了Hash and Eq trait才能被使用
 
 
 ### Test related

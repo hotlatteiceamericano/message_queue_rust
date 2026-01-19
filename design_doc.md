@@ -25,6 +25,12 @@ Topic管理不同類型的訊息。Topic需要追蹤該topic下面有幾個segme
 ### Topic::read(offset: u64) -> Result<Message>
 接受offset當做參數，並回傳Result<Message>。Err需要區分是提供的offset找不到相應的message，或是其他讀取上的錯誤。
 
+### Topic::save() -> Result<()>
+將topic用JSON儲存到local file system
+
+### Topic::load(topic_name: String) -> Result<Topic>
+根據topic name在project directory裡讀取topic
+
 ## Consumer Group
 負責管理每個consumer group的讀什麼topic到多少offset，將以HashMap<Topic, u64>的方式為每個consumer group儲存哪一個topic讀到哪一個offset。
 需要注記這裡記錄的offset是「read offset」，不同的Topic所記錄的offset是「write offset」。
@@ -35,8 +41,16 @@ consumer group同樣需要提供write和read methods。
 
 接著呼叫Topic::write將message寫入到最新的write offset。最後回傳Result<_>來表達寫入的成功與否。
 
-### ConsumerGroup::read(topic: Topic) -> Result<Message>
-接受Topic當作參數，並根據HashMap的read offset來讀取最新的message。會回傳Result<Message>給client。
+### ConsumerGroup::read(topic_name: String) -> Result<Message>
+接受topic name當作參數，先使用topic name讀取topic，後根據HashMap的read offset來讀取最新的message
+讀取後需要為這個consumer group更新該topic的read offset
+因為Segment和Topic都是回傳Message、而不是回傳該message的offset的關係，故採用將每個message的offset存在Message struct裡，並根據每個讀取的message.length來為不同的consumer group更新read offset
+
+### ConsumerGroup::save() -> Result<()>
+將consumer group以JSON形式儲存在project directory/data/consumer下面，以保存consumer group的資料
+
+### ConsumerGroup::load(consumer_group_name: String) -> Result<ConsumerGroup>
+根據consumer group name來讀取已經儲存過的consumer group
 
 備註，透過決定讓ConsumerGroup::read()和ConsumerGroup::write()接受Message當做參數，代表的是我將提供Message型態當作client也可以用的public型態。
 

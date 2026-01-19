@@ -16,3 +16,4 @@
 
 ### Test related
 1. 不同的test cases是在不同的執行緒裡執行，所以即便不同的rstest之間會drop test topic，仍然有可能會造成concurrency issue
+2. stack trace不會顯示Result的Error是從哪裡來的，因為當Error產生時，並不會被算成"exeception"，進而stack trace不會capture到Error生成的時候

@@ -48,13 +48,13 @@ impl Segment {
     pub fn write(&mut self, message: &Message) -> io::Result<u64> {
         let serialized_msg = bincode::serialize(message)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        let msg_len = serialized_msg.len() as u32;
 
-        self.file.write_all(&msg_len.to_be_bytes())?;
+        self.file
+            .write_all(&message.content_length().to_be_bytes())?;
         self.file.write_all(&serialized_msg)?;
         self.file.flush()?;
 
-        self.write_position += 4 + msg_len as u64;
+        self.write_position += message.total_length() as u64;
 
         Ok(self.write_position)
     }
@@ -67,7 +67,7 @@ impl Segment {
     pub fn read(&mut self, offset: u64) -> io::Result<Message> {
         self.file.seek(io::SeekFrom::Start(offset))?;
 
-        let mut len_bytes = [0u8; 4];
+        let mut len_bytes = [0u8; Message::MESSAGE_LENGTH as usize];
         self.file.read_exact(&mut len_bytes)?;
         let msg_len = u32::from_be_bytes(len_bytes);
 
@@ -132,7 +132,9 @@ mod test {
         let message = Message::new(String::from("hello world!"));
         segment.write(&message).unwrap();
 
-        let message_read = segment.read(0).unwrap();
+        let message_read = segment
+            .read(0)
+            .unwrap_or_else(|e| panic!("error when read from the segment: {:#?}", e));
         assert_eq!(message_read.content, "hello world!");
     }
 }

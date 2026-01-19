@@ -32,7 +32,6 @@ impl ConsumerGroup {
 
     pub fn poll(&mut self, topic_name: String) -> io::Result<Message> {
         let mut topic = Topic::load(topic_name)?;
-        // todo: see whether does take owned u64 or get the owned u64 from the topic
         let offset = self.read_offset().get(&topic).unwrap();
         topic.read(offset.clone())
     }

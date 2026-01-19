@@ -101,7 +101,7 @@ impl Topic {
     /// # Arguments
     /// * offset - self explanatory
     /// # Returns the message
-    pub fn read(&mut self, offset: u64) -> io::Result<Message> {
+    pub fn read(&mut self, offset: &u64) -> io::Result<Message> {
         let target_segment = match self.segments.range_mut(..=offset).next_back() {
             Some((_, segment)) => segment,
             None => {
@@ -164,38 +164,13 @@ impl Hash for Topic {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
 
-    use rand::Rng;
     use rstest::fixture;
     use rstest::rstest;
 
     use crate::message::Message;
+    use crate::test_utils::TestTopic;
     use crate::topic::topic::Topic;
-
-    struct TestTopic {
-        topic: Topic,
-    }
-
-    /// Needs to use random charaters as test topic names
-    /// to prevent concurrent issue that different test cases
-    /// interacting with the same topic and the same segment file
-    impl TestTopic {
-        fn new() -> Self {
-            let topic = Topic::new(String::from(generate_random_chars()));
-            Self { topic }
-        }
-    }
-
-    impl Drop for TestTopic {
-        fn drop(&mut self) {
-            let topic_path_buf = std::env::current_dir()
-                .unwrap()
-                .join("data")
-                .join(&self.topic.name);
-            fs::remove_dir_all(topic_path_buf).unwrap();
-        }
-    }
 
     // todo: use Deref to automatically ref to the inner topic
     #[fixture]
@@ -233,7 +208,7 @@ mod test {
         let message = Message::new(String::from("testing_read"));
         test_topic.topic.write(&message).unwrap();
 
-        assert_eq!(test_topic.topic.read(0).unwrap().content, message.content);
+        assert_eq!(test_topic.topic.read(&0).unwrap().content, message.content);
     }
 
     #[rstest]
@@ -248,16 +223,6 @@ mod test {
 
         assert_eq!(loaded_topic.name, test_topic.topic.name);
         assert_eq!(loaded_topic.segments.len(), 1);
-        assert_eq!(loaded_topic.read(0).unwrap().content, message.content);
-    }
-
-    pub fn generate_random_chars() -> String {
-        let mut rng = rand::thread_rng();
-        (0..8)
-            .map(|_| {
-                let idx = rng.gen_range(0..26);
-                (b'a' + idx) as char
-            })
-            .collect()
+        assert_eq!(loaded_topic.read(&0).unwrap().content, message.content);
     }
 }

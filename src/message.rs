@@ -1,5 +1,3 @@
-use std::io;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -8,7 +6,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub const MESSAGE_LENGTH: u32 = 4;
+    pub const MESSAGE_LENGTH: u64 = 4;
 
     pub fn new(content: &str) -> Self {
         Self {
@@ -16,14 +14,11 @@ impl Message {
         }
     }
 
-    pub fn content_length(&self) -> u32 {
-        bincode::serialize(self)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-            .unwrap()
-            .len() as u32
+    pub fn content_length(&self) -> u64 {
+        bincode::serialized_size(self).unwrap()
     }
 
-    pub fn total_length(&self) -> u32 {
+    pub fn total_length(&self) -> u64 {
         self.content_length() + Self::MESSAGE_LENGTH
     }
 }

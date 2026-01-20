@@ -55,4 +55,8 @@ consumer group同樣需要提供write和read methods。
 備註，透過決定讓ConsumerGroup::read()和ConsumerGroup::write()接受Message當做參數，代表的是我將提供Message型態當作client也可以用的public型態。
 
 ## Message
-目前先用content的名字和String的型態來記錄這個message，將適時擴展這個型態。
+### Fields
+* content: String
+### Methods
+* content_length() -> u32: returns the length of its content
+* total_length() -> u32: return the content length + 4. the extra 4 bytes are to store its content length

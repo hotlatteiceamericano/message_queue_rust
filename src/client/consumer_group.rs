@@ -19,7 +19,7 @@ impl ConsumerGroup {
         &self.read_offset
     }
 
-    pub fn write(&mut self, topic_name: String, message: String) -> io::Result<()> {
+    pub fn write(&mut self, topic_name: &str, message: &str) -> io::Result<()> {
         let mut topic = Topic::load(topic_name).expect("did not found topic");
         topic.write(&Message::new(message))?;
 
@@ -30,7 +30,7 @@ impl ConsumerGroup {
         Ok(())
     }
 
-    pub fn poll(&mut self, topic_name: String) -> io::Result<Message> {
+    pub fn poll(&mut self, topic_name: &str) -> io::Result<Message> {
         let mut topic = Topic::load(topic_name)?;
         let offset = self.read_offset().get(&topic).unwrap();
         let message = topic.read(offset)?;
@@ -61,15 +61,10 @@ mod test {
         let mut consumer_group = ConsumerGroup::new("test_consumer_group");
 
         consumer_group
-            .write(
-                test_topic.topic.name().to_string(),
-                String::from("hello world!"),
-            )
+            .write(test_topic.topic.name(), "hello world!")
             .unwrap();
 
-        let message = consumer_group
-            .poll(test_topic.topic.name().to_string())
-            .unwrap();
+        let message = consumer_group.poll(test_topic.topic.name()).unwrap();
 
         assert_eq!(message.content, "hello world!");
     }
@@ -79,27 +74,17 @@ mod test {
         let mut consumer_group = ConsumerGroup::new("test_consumer_group");
 
         consumer_group
-            .write(
-                test_topic.topic.name().to_string(),
-                String::from("hello world 1"),
-            )
+            .write(test_topic.topic.name(), "hello world 1")
             .unwrap();
         consumer_group
-            .write(
-                test_topic.topic.name().to_string(),
-                String::from("hello world 2"),
-            )
+            .write(test_topic.topic.name(), "hello world 2")
             .unwrap();
 
-        let first_message = consumer_group
-            .poll(test_topic.topic.name().to_string())
-            .unwrap();
+        let first_message = consumer_group.poll(test_topic.topic.name()).unwrap();
 
         assert_eq!(first_message.content, "hello world 1");
 
-        let second_message = consumer_group
-            .poll(test_topic.topic.name().to_string())
-            .unwrap();
+        let second_message = consumer_group.poll(test_topic.topic.name()).unwrap();
 
         assert_eq!(second_message.content, "hello world 2");
     }

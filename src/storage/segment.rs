@@ -121,7 +121,7 @@ mod test {
     #[rstest]
     fn test_write(random_topic_name: String) {
         let mut segment = Segment::new(&random_topic_name, 0).unwrap();
-        let message = &Message::new(String::from("hello world!"));
+        let message = &Message::new("hello world!");
 
         let latest_offset = segment.write(&message).unwrap();
 
@@ -135,7 +135,7 @@ mod test {
     pub fn test_read(random_topic_name: String) {
         let mut segment = Segment::new(&random_topic_name, 0).unwrap();
 
-        let message = Message::new(String::from("hello world!"));
+        let message = Message::new("hello world!");
         segment.write(&message).unwrap();
 
         let message_read = segment

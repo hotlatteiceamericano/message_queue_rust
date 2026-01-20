@@ -10,8 +10,10 @@ pub struct Message {
 impl Message {
     pub const MESSAGE_LENGTH: u32 = 4;
 
-    pub fn new(content: String) -> Self {
-        Self { content }
+    pub fn new(content: &str) -> Self {
+        Self {
+            content: String::from(content),
+        }
     }
 
     pub fn content_length(&self) -> u32 {

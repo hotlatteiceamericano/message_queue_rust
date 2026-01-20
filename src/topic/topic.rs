@@ -42,8 +42,8 @@ impl Topic {
     /// Loads a topic with given name
     /// # Arguments
     /// * topic_name - self explanatory
-    pub fn load(topic_name: String) -> io::Result<Self> {
-        let topic_file_path = std::env::current_dir()?.join("data").join(&topic_name);
+    pub fn load(topic_name: &str) -> io::Result<Self> {
+        let topic_file_path = std::env::current_dir()?.join("data").join(topic_name);
         if topic_file_path.exists() {
             let segments = Self::load_segments(topic_name)?;
             let json = fs::read_to_string(topic_file_path.join("index.json"))?;
@@ -120,8 +120,8 @@ impl Topic {
         target_segment.read(local_position)
     }
 
-    fn load_segments(topic_name: String) -> io::Result<BTreeMap<u64, Segment>> {
-        let topic_directory = std::env::current_dir()?.join("data").join(&topic_name);
+    fn load_segments(topic_name: &str) -> io::Result<BTreeMap<u64, Segment>> {
+        let topic_directory = std::env::current_dir()?.join("data").join(topic_name);
         let segment_file_paths = fs::read_dir(topic_directory)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
@@ -144,7 +144,7 @@ impl Topic {
                 .ok_or_else(|| {
                     io::Error::new(io::ErrorKind::InvalidInput, "Invalid segment filename")
                 })?;
-            let segment = Segment::new(topic_name.as_str(), base_offset)?;
+            let segment = Segment::new(topic_name, base_offset)?;
             segments.insert(base_offset, segment);
         }
 
@@ -184,7 +184,7 @@ mod test {
 
     #[rstest]
     fn test_write(mut test_topic: TestTopic) {
-        let first_msg = Message::new(String::from("hello world!"));
+        let first_msg = Message::new("hello world!");
         test_topic.topic.write(&first_msg).unwrap();
         let mut last_entry = test_topic.topic.segments.last_entry().unwrap();
         let segment = last_entry.get_mut();
@@ -192,7 +192,7 @@ mod test {
         assert_eq!(&message.content, &first_msg.content);
         assert_eq!(test_topic.topic.write_offset, 24);
 
-        let second_msg = Message::new(String::from("hello world again!"));
+        let second_msg = Message::new("hello world again!");
         test_topic.topic.write(&second_msg).unwrap();
         let mut last_entry = test_topic.topic.segments.last_entry().unwrap();
         let segment = last_entry.get_mut();
@@ -209,7 +209,7 @@ mod test {
     fn test_read(mut test_topic: TestTopic) {
         assert_eq!(test_topic.topic.segments.len(), 1);
 
-        let message = Message::new(String::from("testing_read"));
+        let message = Message::new("testing_read");
         test_topic.topic.write(&message).unwrap();
 
         assert_eq!(test_topic.topic.read(&0).unwrap().content, message.content);
@@ -217,12 +217,12 @@ mod test {
 
     #[rstest]
     pub fn test_save_load(mut test_topic: TestTopic) {
-        let message = Message::new(String::from("testing_for_save_and_load"));
+        let message = Message::new("testing_for_save_and_load");
         test_topic.topic.write(&message).unwrap();
 
         test_topic.topic.save().unwrap();
 
-        let topic_name = test_topic.topic.name.clone();
+        let topic_name = test_topic.topic.name().clone();
         let mut loaded_topic = Topic::load(topic_name).unwrap();
 
         assert_eq!(loaded_topic.name, test_topic.topic.name);

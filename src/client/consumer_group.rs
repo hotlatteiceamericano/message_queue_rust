@@ -59,9 +59,6 @@ mod test {
     #[rstest]
     pub fn test_write_poll(test_topic: TestTopic) {
         let mut consumer_group = ConsumerGroup::new("test_consumer_group");
-        // needed to call save as ConsumerGroup::write finds the topic from local file
-        // todo: find the way to not call the save()
-        test_topic.topic.save().unwrap();
 
         consumer_group
             .write(
@@ -80,7 +77,6 @@ mod test {
     #[rstest]
     pub fn test_read_offset(test_topic: TestTopic) {
         let mut consumer_group = ConsumerGroup::new("test_consumer_group");
-        test_topic.topic.save().unwrap();
 
         consumer_group
             .write(

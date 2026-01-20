@@ -19,7 +19,8 @@ pub mod test_utils {
     /// interacting with the same topic and the same segment file
     impl TestTopic {
         pub fn new() -> Self {
-            let topic = Topic::new(String::from(generate_random_chars()));
+            let topic = Topic::new(generate_random_chars().as_str())
+                .expect("TestTopic not able to create topic successfully");
             Self { topic }
         }
     }

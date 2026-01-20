@@ -60,3 +60,4 @@ consumer group同樣需要提供write和read methods。
 ### Methods
 * content_length() -> u32: returns the length of its content
 * total_length() -> u32: return the content length + 4. the extra 4 bytes are to store its content length
+

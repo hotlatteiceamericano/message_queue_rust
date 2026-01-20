@@ -19,16 +19,20 @@ pub struct Topic {
 }
 
 impl Topic {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: &str) -> io::Result<Self> {
         if PathBuf::from(std::env::current_dir().unwrap().join(&name)).exists() {
             panic!("topic with name: {} already exist!", &name);
         }
 
-        Self {
-            name: name.clone(),
-            segments: BTreeMap::from([(0, Segment::new(name.as_str(), 0).unwrap())]),
+        let topic = Self {
+            name: name.to_string(),
+            segments: BTreeMap::from([(0, Segment::new(name, 0).unwrap())]),
             write_offset: 0,
-        }
+        };
+
+        topic.save()?;
+
+        Ok(topic)
     }
 
     pub fn name(&self) -> &str {

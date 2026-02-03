@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{message::Message, topic::topic::Topic};
+use segment_rust::message::Message;
+
+use crate::topic::topic::Topic;
 
 pub struct ConsumerGroup {
     name: String,

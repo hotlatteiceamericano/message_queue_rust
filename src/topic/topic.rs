@@ -6,9 +6,8 @@ use std::{
     path::PathBuf,
 };
 
+use segment_rust::{message::Message, segment::Segment};
 use serde::{Deserialize, Serialize};
-
-use crate::{message::Message, storage::segment::Segment};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Topic {
@@ -180,8 +179,8 @@ mod test {
 
     use rstest::fixture;
     use rstest::rstest;
+    use segment_rust::message::Message;
 
-    use crate::message::Message;
     use crate::test_utils::TestTopic;
     use crate::topic::topic::Topic;
 

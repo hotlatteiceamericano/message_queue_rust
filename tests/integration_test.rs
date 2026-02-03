@@ -1,6 +1,5 @@
-use message_queue_rust::{
-    client::consumer_group::ConsumerGroup, message::Message, topic::topic::Topic,
-};
+use message_queue_rust::{client::consumer_group::ConsumerGroup, topic::topic::Topic};
+use segment_rust::message::Message;
 
 #[test]
 fn test_read_write() {

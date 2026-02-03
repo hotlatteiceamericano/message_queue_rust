@@ -227,6 +227,7 @@ dependencies = [
  "color-backtrace",
  "rand",
  "rstest",
+ "segment_rust",
  "serde",
  "serde_json",
  "tempfile",
@@ -430,6 +431,16 @@ dependencies = [
  "libc",
  "linux-raw-sys",
  "windows-sys",
+]
+
+[[package]]
+name = "segment_rust"
+version = "0.1.0"
+source = "git+https://github.com/hotlatteiceamericano/segment_rust#ae2dcf80c89c4306a29221e7b033e0ce08463c4d"
+dependencies = [
+ "anyhow",
+ "bincode",
+ "serde",
 ]
 
 [[package]]

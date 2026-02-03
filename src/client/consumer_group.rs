@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io};
+use std::collections::HashMap;
 
 use crate::{message::Message, topic::topic::Topic};
 
@@ -19,7 +19,7 @@ impl ConsumerGroup {
         &self.read_offset
     }
 
-    pub fn write(&mut self, topic_name: &str, message: &str) -> io::Result<()> {
+    pub fn write(&mut self, topic_name: &str, message: &str) -> anyhow::Result<()> {
         let mut topic = Topic::load(topic_name).expect("did not found topic");
         topic.write(&Message::new(message))?;
 
@@ -30,7 +30,7 @@ impl ConsumerGroup {
         Ok(())
     }
 
-    pub fn poll(&mut self, topic_name: &str) -> io::Result<Message> {
+    pub fn poll(&mut self, topic_name: &str) -> anyhow::Result<Message> {
         let mut topic = Topic::load(topic_name)?;
         let offset = self.read_offset().get(&topic).unwrap();
         let message = topic.read(offset)?;

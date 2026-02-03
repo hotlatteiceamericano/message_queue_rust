@@ -1,8 +1,10 @@
+use anyhow::Context;
+
 use crate::message::Message;
 use std::{
-    fs::{File, OpenOptions, create_dir_all},
+    fs::{self, File, OpenOptions},
     io::{self, Read, Seek, Write},
-    path::PathBuf,
+    path::Path,
 };
 
 #[derive(Debug)]
@@ -14,18 +16,31 @@ pub struct Segment {
 
 impl Segment {
     pub const SEGMENT_SIZE: u64 = 128;
+    pub const FILE_EXTENSION: &str = "segment";
 
-    pub fn new(topic_name: &str, base_offset: u64) -> io::Result<Self> {
-        let path = Self::create_path(topic_name.to_string(), base_offset)?;
+    /// # Arguments
+    /// * parent_directory: the parent directory you are placing the segment file
+    ///   it will create the parent directory if not exist
+    /// * base_offset: segment use the base_offset as its filename
+    pub fn new(parent_directory: &Path, base_offset: u64) -> anyhow::Result<Self> {
+        if !parent_directory.exists() {
+            fs::create_dir_all(parent_directory)
+                .context("cannot create parent directory when instantiate segment")?;
+        }
+
+        let file_path = parent_directory
+            .join(format!("{:08}", base_offset))
+            .with_extension(Segment::FILE_EXTENSION);
 
         let file = OpenOptions::new()
             .create(true)
             .read(true)
             .append(true)
-            .open(path)?;
+            .open(file_path)?;
 
         Ok(Self {
             base_offset,
+            // todo: replace 0 with current length + 1
             write_position: 0,
             file,
         })
@@ -79,26 +94,14 @@ impl Segment {
     pub fn is_full(&self) -> bool {
         self.write_position() >= Segment::SEGMENT_SIZE
     }
-
-    fn create_path(topic_name: String, base_offset: u64) -> io::Result<PathBuf> {
-        let project_root = std::env::current_dir()?;
-        let path = project_root
-            .join("data")
-            .join(topic_name)
-            .join(format!("{:08}", base_offset))
-            .with_extension("queue");
-        eprintln!("created path name: {}", path.to_str().unwrap());
-        if let Some(parent) = path.parent() {
-            create_dir_all(parent)?;
-        }
-        Ok(path)
-    }
 }
 
 #[cfg(test)]
 mod test {
 
     use std::fs;
+    use std::path::Path;
+    use std::path::PathBuf;
 
     use rand::Rng;
     use rstest::fixture;
@@ -108,19 +111,23 @@ mod test {
     use crate::storage::segment::Segment;
 
     #[fixture]
-    fn random_topic_name() -> String {
+    fn random_parent_directory() -> PathBuf {
         let mut rng = rand::thread_rng();
-        (0..8)
+        let random_parent_dir: String = (0..8)
             .map(|_| {
                 let idx = rng.gen_range(0..26);
                 (b'a' + idx) as char
             })
-            .collect()
+            .collect();
+        std::env::current_dir()
+            .unwrap()
+            .join("test_data")
+            .join(random_parent_dir)
     }
 
     #[rstest]
-    fn test_write(random_topic_name: String) {
-        let mut segment = Segment::new(&random_topic_name, 0).unwrap();
+    fn test_write(random_parent_directory: PathBuf) {
+        let mut segment = Segment::new(&random_parent_directory, 0).unwrap();
         let message = &Message::new("hello world!");
 
         let latest_offset = segment.write(&message).unwrap();
@@ -128,12 +135,12 @@ mod test {
         let serialized_msg = bincode::serialize(&message.content);
         assert_eq!(latest_offset, 4 + serialized_msg.unwrap().len() as u64);
 
-        remove_path(random_topic_name.as_str());
+        remove_path(&random_parent_directory);
     }
 
     #[rstest]
-    pub fn test_read(random_topic_name: String) {
-        let mut segment = Segment::new(&random_topic_name, 0).unwrap();
+    pub fn test_read(random_parent_directory: PathBuf) {
+        let mut segment = Segment::new(&random_parent_directory, 0).unwrap();
 
         let message = Message::new("hello world!");
         segment.write(&message).unwrap();
@@ -143,14 +150,10 @@ mod test {
             .unwrap_or_else(|e| panic!("error when read from the segment: {:#?}", e));
         assert_eq!(message_read.content, "hello world!");
 
-        remove_path(random_topic_name.as_str());
+        remove_path(&random_parent_directory);
     }
 
-    fn remove_path(topic_name: &str) {
-        let topic_path_buf = std::env::current_dir()
-            .unwrap()
-            .join("data")
-            .join(topic_name);
-        fs::remove_dir_all(topic_path_buf).unwrap();
+    fn remove_path(path: &Path) {
+        fs::remove_dir_all(path).unwrap();
     }
 }

@@ -19,14 +19,15 @@ pub struct Topic {
 }
 
 impl Topic {
-    pub fn new(name: &str) -> io::Result<Self> {
+    pub fn new(name: &str) -> anyhow::Result<Self> {
         if PathBuf::from(std::env::current_dir().unwrap().join(&name)).exists() {
             panic!("topic with name: {} already exist!", &name);
         }
 
+        let first_segment = Segment::new(&Self::get_directory(name), 0)?;
         let topic = Self {
             name: name.to_string(),
-            segments: BTreeMap::from([(0, Segment::new(name, 0).unwrap())]),
+            segments: BTreeMap::from([(0, first_segment)]),
             write_offset: 0,
         };
 
@@ -42,8 +43,8 @@ impl Topic {
     /// Loads a topic with given name
     /// # Arguments
     /// * topic_name - self explanatory
-    pub fn load(topic_name: &str) -> io::Result<Self> {
-        let topic_file_path = std::env::current_dir()?.join("data").join(topic_name);
+    pub fn load(topic_name: &str) -> anyhow::Result<Self> {
+        let topic_file_path = Self::get_directory(topic_name);
         if topic_file_path.exists() {
             let segments = Self::load_segments(topic_name)?;
             let json = fs::read_to_string(topic_file_path.join("index.json"))?;
@@ -56,7 +57,8 @@ impl Topic {
             Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 format!("Did not found topic with topic name: {}", &topic_name),
-            ))
+            )
+            .into())
         }
     }
 
@@ -80,7 +82,7 @@ impl Topic {
     /// * message - the message being written to the  topic
     /// # Returns
     /// Result indicates the write is successful or not
-    pub fn write(&mut self, message: &Message) -> io::Result<()> {
+    pub fn write(&mut self, message: &Message) -> anyhow::Result<()> {
         if let Some(mut last_entry) = self.segments.last_entry() {
             let last_segment = last_entry.get_mut();
 
@@ -91,7 +93,7 @@ impl Topic {
             if last_segment.write_position() >= Segment::SEGMENT_SIZE {
                 self.segments.insert(
                     self.write_offset,
-                    Segment::new(self.name.as_str(), self.write_offset)?,
+                    Segment::new(&Self::get_directory(&self.name), self.write_offset)?,
                 );
             }
 
@@ -120,9 +122,9 @@ impl Topic {
         target_segment.read(local_position)
     }
 
-    fn load_segments(topic_name: &str) -> io::Result<BTreeMap<u64, Segment>> {
-        let topic_directory = std::env::current_dir()?.join("data").join(topic_name);
-        let segment_file_paths = fs::read_dir(topic_directory)?
+    fn load_segments(topic_name: &str) -> anyhow::Result<BTreeMap<u64, Segment>> {
+        let topic_directory = Self::get_directory(topic_name);
+        let segment_file_paths = fs::read_dir(&topic_directory)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.is_file())
@@ -131,7 +133,7 @@ impl Topic {
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .eq_ignore_ascii_case("queue")
+                    .eq_ignore_ascii_case(Segment::FILE_EXTENSION)
             })
             .collect::<Vec<PathBuf>>();
 
@@ -144,11 +146,18 @@ impl Topic {
                 .ok_or_else(|| {
                     io::Error::new(io::ErrorKind::InvalidInput, "Invalid segment filename")
                 })?;
-            let segment = Segment::new(topic_name, base_offset)?;
+            let segment = Segment::new(&topic_directory, base_offset)?;
             segments.insert(base_offset, segment);
         }
 
         Ok(segments)
+    }
+
+    fn get_directory(topic_name: &str) -> PathBuf {
+        std::env::current_dir()
+            .expect("cannot load current directory")
+            .join("data")
+            .join(topic_name)
     }
 }
 
@@ -222,7 +231,7 @@ mod test {
 
         test_topic.topic.save().unwrap();
 
-        let topic_name = test_topic.topic.name().clone();
+        let topic_name = test_topic.topic.name();
         let mut loaded_topic = Topic::load(topic_name).unwrap();
 
         assert_eq!(loaded_topic.name, test_topic.topic.name);

@@ -18,6 +18,8 @@ pub struct Topic {
 }
 
 impl Topic {
+    const SEGMENT_LENGTH_PER_TOPIC: u64 = 128;
+
     pub fn new(name: &str) -> anyhow::Result<Self> {
         if PathBuf::from(std::env::current_dir().unwrap().join(&name)).exists() {
             panic!("topic with name: {} already exist!", &name);
@@ -89,7 +91,7 @@ impl Topic {
 
             self.write_offset = last_segment.base_offset() + last_segment.write_position();
 
-            if last_segment.write_position() >= Segment::SEGMENT_SIZE {
+            if last_segment.write_position() >= Self::SEGMENT_LENGTH_PER_TOPIC {
                 self.segments.insert(
                     self.write_offset,
                     Segment::new(&Self::get_directory(&self.name), self.write_offset)?,

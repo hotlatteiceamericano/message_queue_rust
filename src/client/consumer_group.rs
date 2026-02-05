@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use segment_rust::message::Message;
+use segment_rust::{message::Message, storable::Storable};
 
 use crate::topic::topic::Topic;
 

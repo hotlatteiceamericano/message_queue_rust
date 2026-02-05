@@ -6,13 +6,13 @@ use std::{
     path::PathBuf,
 };
 
-use segment_rust::{message::Message, segment::Segment};
+use segment_rust::{message::Message, segment, segment::Segment};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Topic {
     #[serde(skip)]
-    segments: BTreeMap<u64, Segment>,
+    segments: BTreeMap<u64, Segment<Message>>,
     name: String,
     write_offset: u64,
 }
@@ -123,7 +123,7 @@ impl Topic {
         target_segment.read(local_position)
     }
 
-    fn load_segments(topic_name: &str) -> anyhow::Result<BTreeMap<u64, Segment>> {
+    fn load_segments(topic_name: &str) -> anyhow::Result<BTreeMap<u64, Segment<Message>>> {
         let topic_directory = Self::get_directory(topic_name);
         let segment_file_paths = fs::read_dir(&topic_directory)?
             .filter_map(|entry| entry.ok())
@@ -134,7 +134,7 @@ impl Topic {
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .eq_ignore_ascii_case(Segment::FILE_EXTENSION)
+                    .eq_ignore_ascii_case(segment::FILE_EXTENSION)
             })
             .collect::<Vec<PathBuf>>();
 

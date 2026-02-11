@@ -6,6 +6,7 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::bail;
 use segment_rust::{message::Message, segment, segment::Segment};
 use serde::{Deserialize, Serialize};
 
@@ -108,14 +109,11 @@ impl Topic {
     /// # Arguments
     /// * offset - self explanatory
     /// # Returns the message
-    pub fn read(&mut self, offset: &u64) -> io::Result<Message> {
+    pub fn read(&mut self, offset: &u64) -> anyhow::Result<Message> {
         let target_segment = match self.segments.range_mut(..=offset).next_back() {
             Some((_, segment)) => segment,
             None => {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("cannot find corresponding segment per offset: {}", offset),
-                ));
+                bail!("cannot find corresponding segment per offset: {}", offset);
             }
         };
 
